@@ -7,8 +7,6 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-import com.badlogic.gdx.math.Rectangle;
-import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 
@@ -21,6 +19,7 @@ public class MainGame extends ApplicationAdapter {
 
 	SpriteBatch batch;
 	ShapeRenderer debugRenderer;
+	boolean debug;
 	OrthographicCamera camera;
 	FitViewport fitViewport;
 
@@ -51,6 +50,10 @@ public class MainGame extends ApplicationAdapter {
 		world[1][8] = 1;
 		world[1][9] = 1;
 		world[2][8] = 1;
+
+		world[3][11] = 1;
+		world[3][12] = 1;
+		world[4][13] = 1;
 	}
 
 	@Override
@@ -62,18 +65,30 @@ public class MainGame extends ApplicationAdapter {
 	public void render () {
 		ScreenUtils.clear(Color.SKY);
 		camera.update();
+		handleInput();
 
 		player.update(world);
 
 		drawBatch();
-		renderDebug();
+
+		if(debug)
+			renderDebug();
 	}
 
 	public void drawBatch() {
 		batch.setProjectionMatrix(camera.combined);
 		batch.begin();
 
-		player.drawSprite(batch, textures.getPlayerTexture());
+		for (int col = 0; col < WORLD_HEIGHT; col++) {
+			for (int row = 0; row < WORLD_WIDTH; row++) {
+				if (world[col][row] == 1) {
+					batch.draw(textures.getBlockSprite(),row*32,col*32);
+				}
+			}
+		}
+
+
+		player.drawSprite(batch, textures.getPlayerTexture(player.isRight, player.state));
 
 		batch.end();
 	}
@@ -95,7 +110,12 @@ public class MainGame extends ApplicationAdapter {
 
 		debugRenderer.end();
 	}
-	
+
+	public void handleInput() {
+		if(Gdx.input.isKeyJustPressed(Input.Keys.SEMICOLON))
+			debug = !debug;
+	}
+
 	@Override
 	public void dispose () {
 		textures.dispose();
