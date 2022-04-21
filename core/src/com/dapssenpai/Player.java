@@ -6,7 +6,6 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 
@@ -16,48 +15,57 @@ public class Player {
     static int JUMP = 2;
     static int FALL = 3;
 
+    boolean left, right, jump;
+
     Rectangle hitbox;
-    Rectangle bounds;
-    int gridSize;
+    Rectangle bounds; // SPRITE BOUNDS
+    int gridSize; // TILESET SIZE
 
     Vector2 velocity = new Vector2();
-    float acceleration = 10f;
-    float maxSpeed = 4f;
-    float damp = 0.8f;
+    float moveSpeed = 4f;
     float gravity = -10f;
     float jumpForce = 5f;
-    boolean canJump;
+    boolean grounded;
 
     boolean isRight = true;
     int state = IDLE;
 
-    Player(float x, float y, int gridSize) {
-        hitbox = new Rectangle(x, y, gridSize*0.5f, gridSize*0.7f);
-        bounds = new Rectangle(x, y, gridSize, gridSize);
+    Player(float x, float y, int gridSize, int spriteSize) {
+        hitbox = new Rectangle(x, y, spriteSize*0.5f, spriteSize*0.7f);
+        bounds = new Rectangle(x, y, spriteSize, spriteSize);
         this.gridSize = gridSize;
     }
 
     public void update(int[][] world) {
-        handleGravity(world);
+        velocity.x = 0;
         handleInput();
 
-        if(!canMoveSideways(world))
-            velocity.x = 0;
+        if(jump) // PLAYER IS JUMPING
+            jump();
+        if(!left && !right && grounded) {
+            updateState();
+            return; // IF PLAYER IS NOT MOVING AT ALL
+        }
 
-        // UPDATE STATE FOR SPRITE
+
+        if (left && !right)
+            velocity.x = -moveSpeed;
+        if (right && !left)
+            velocity.x = moveSpeed;
+
+        if (grounded) {
+            moveHorizontal(world);
+            if (!wouldBeTouchingSolid(0,-1,world))
+                grounded = false;
+        } else {
+            moveVertical(world);
+            moveHorizontal(world);
+        }
+
         updateState();
-        if(velocity.x < 0)
-            isRight = false;
-        else if(velocity.x > 0)
-            isRight = true;
-
-        System.out.println(velocity.x);
-
-        hitbox.y += velocity.y;
-        hitbox.x += velocity.x;
 
         bounds.y = hitbox.y;
-        bounds.x = (hitbox.x + hitbox.width/2)-(bounds.width/2);
+        bounds.x = (hitbox.x + hitbox.width/2)-(bounds.width/2); // OFFSET FROM CENTER OF HITBOX
     }
 
     public void updateState() {
@@ -69,6 +77,11 @@ public class Player {
             state = WALK;
         else
             state = IDLE;
+
+        if(velocity.x < 0)
+            isRight = false;
+        else if(velocity.x > 0)
+            isRight = true;
     }
 
     public void drawDebug(ShapeRenderer renderer) {
@@ -83,65 +96,68 @@ public class Player {
         batch.draw(texture, bounds.x, bounds.y);
     }
 
-    public void handleGravity(int[][] world) {
-        if (canMoveDown(world)) {
+    public void handleInput() {
+        left = (Gdx.input.isKeyPressed(Input.Keys.A) || Gdx.input.isKeyPressed(Input.Keys.LEFT));
+        right = (Gdx.input.isKeyPressed(Input.Keys.D) || Gdx.input.isKeyPressed(Input.Keys.RIGHT));
+        jump = (Gdx.input.isKeyPressed(Input.Keys.SPACE) || Gdx.input.isKeyJustPressed(Input.Keys.W));
+    }
+
+    private void jump() {
+        if(!grounded)
+            return;
+        grounded = false;
+        velocity.y = jumpForce;
+    }
+
+    public void moveVertical(int[][] world) {
+        if (!grounded) {
             velocity.y += gravity * Gdx.graphics.getDeltaTime();
+            if (wouldBeTouchingSolid(0, velocity.y, world)) {
+                if(velocity.y < 0) {
+                    grounded = true;
+                    hitbox.y = ((int)hitbox.y/gridSize)*gridSize;
+                }
+                velocity.y = 0;
+            } else {
+                hitbox.y += velocity.y;
+            }
         } else {
             velocity.y = 0;
-            canJump = true;
         }
     }
 
-    public void handleInput() {
-        if (Gdx.input.isKeyPressed(Input.Keys.A) || Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
-            velocity.x += -acceleration * Gdx.graphics.getDeltaTime();
-        } else if (Gdx.input.isKeyPressed(Input.Keys.D) || Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
-            velocity.x += acceleration * Gdx.graphics.getDeltaTime();
+    public void moveHorizontal(int[][] world) {
+        if (wouldBeTouchingSolid(velocity.x, 0, world)) {
+            int xUnitPos = ((int) hitbox.x/gridSize)*gridSize;
+            if (velocity.x > 0) // GOING RIGHT
+                hitbox.x = xUnitPos + (gridSize-hitbox.width)-1;
+            else
+                hitbox.x = xUnitPos;
+            velocity.x = 0;
+
         } else {
-            if(Math.abs(velocity.x) < 0.1)
-                velocity.x = 0;
-            velocity.x *= damp;
+            hitbox.x += velocity.x;
         }
-        if (Gdx.input.isKeyPressed(Input.Keys.SPACE) && canJump) {
-            velocity.y = jumpForce;
-            canJump = false;
-        }
-
-        if(velocity.x > maxSpeed)
-            velocity.x = maxSpeed;
-        if(velocity.x < -maxSpeed)
-            velocity.x = -maxSpeed;
     }
 
-    public boolean canMoveDown(int[][] world) {
-        int xLeft, xRight, y;
+    public boolean wouldBeTouchingSolid(float velX, float velY, int[][] world) {
+        Rectangle tmp = new Rectangle(hitbox);
+        tmp.x += velX;
+        tmp.y += velY;
 
-        if (hitbox.y < 0 || hitbox.x < 0 || hitbox.y >= 480 || hitbox.x >= 640)
-            return true;
-
-        xLeft = (int) (hitbox.x / gridSize);
-        xRight = (int) ((hitbox.x + hitbox.width) / gridSize);
-        y = (int)(hitbox.y + velocity.y) / gridSize;
-
-
-
-        return world[y][xLeft] != 1 && world[y][xRight] != 1;
-
+        if (!isSolid(tmp.x, tmp.y, world))
+            if (!isSolid(tmp.x, tmp.y+tmp.height, world))
+                if (!isSolid(tmp.x+tmp.width, tmp.y, world))
+                    if (!isSolid(tmp.x+tmp.width, tmp.y+tmp.height, world))
+                        return false;
+        return true;
     }
 
-    public boolean canMoveSideways(int[][] world) {
-        int x, yDown, yUp;
-        if (hitbox.y < 0 || hitbox.x < 0 || hitbox.y >= 480 || hitbox.x >= 640)
-            return true;
+    public boolean isSolid(float xPos, float yPos, int[][] world) {
+        int x = (int) xPos / 32;
+        int y = (int) yPos / 32;
 
-        yDown = (int)(hitbox.y + 1) / gridSize;
-        yUp = (int)(hitbox.y + hitbox.height) / gridSize;
-        if (velocity.x > 0)
-            x = (int)(hitbox.x + hitbox.width + velocity.x) / gridSize;
-        else
-            x = (int)(hitbox.x + velocity.x) / gridSize;
-
-        return world[yDown][x] != 1 && world[yUp][x] != 1;
+        return world[y][x] == 1;
     }
 
 }

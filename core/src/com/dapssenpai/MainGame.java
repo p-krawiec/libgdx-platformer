@@ -32,13 +32,13 @@ public class MainGame extends ApplicationAdapter {
 	public void create () {
 		batch = new SpriteBatch();
 		debugRenderer = new ShapeRenderer();
-		camera = new OrthographicCamera(WIDTH,HEIGHT);
+		camera = new OrthographicCamera();
 		camera.setToOrtho(false);
-		fitViewport = new FitViewport(WIDTH, HEIGHT, camera);
+		fitViewport = new FitViewport(camera.viewportWidth, camera.viewportHeight, camera);
 
 		textures = new TextureLoader();
 
-		player = new Player(150,150,GRID_SIZE);
+		player = new Player(150,150, GRID_SIZE, 32);
 		for (int col = 0; col < WORLD_HEIGHT; col++) {
 			for (int row = 0; row < WORLD_WIDTH; row++) {
 				if(row == 0 || row == WORLD_WIDTH-1 || col == 0 || col == WORLD_HEIGHT-1)
@@ -68,6 +68,7 @@ public class MainGame extends ApplicationAdapter {
 		handleInput();
 
 		player.update(world);
+//		camera.position.x = player.hitbox.x;
 
 		drawBatch();
 
