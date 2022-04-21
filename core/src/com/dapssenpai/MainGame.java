@@ -5,7 +5,9 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
@@ -27,6 +29,7 @@ public class MainGame extends ApplicationAdapter {
 	TextureLoader textures;
 
 	Player player;
+	float stateTime = 0;
 
 	@Override
 	public void create () {
@@ -74,6 +77,8 @@ public class MainGame extends ApplicationAdapter {
 
 		if(debug)
 			renderDebug();
+
+		stateTime += Gdx.graphics.getDeltaTime();
 	}
 
 	public void drawBatch() {
@@ -88,8 +93,8 @@ public class MainGame extends ApplicationAdapter {
 			}
 		}
 
-
-		player.drawSprite(batch, textures.getPlayerTexture(player.isRight, player.state));
+		Animation<TextureRegion> currentAnimation = textures.getPlayerAnimation(player.isRight, player.state);
+		batch.draw(currentAnimation.getKeyFrame(stateTime, true), player.bounds.x ,player.bounds.y);
 
 		batch.end();
 	}
