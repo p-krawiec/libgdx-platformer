@@ -10,7 +10,7 @@ public class DesktopLauncher {
 		Lwjgl3ApplicationConfiguration config = new Lwjgl3ApplicationConfiguration();
 		config.setForegroundFPS(60);
 		config.setTitle("libGDX Platformer Test");
-		config.setWindowedMode(640, 480);
+		config.setWindowedMode(1280, 720);
 		new Lwjgl3Application(new MainGame(), config);
 	}
 }

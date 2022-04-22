@@ -10,11 +10,13 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.utils.ScreenUtils;
+import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.FitViewport;
+import com.badlogic.gdx.utils.viewport.ScreenViewport;
 
 public class MainGame extends ApplicationAdapter {
 	static int WIDTH = 640;
-	static int HEIGHT = 480;
+	static int HEIGHT = 360;
 	static int GRID_SIZE = 32;
 	static int WORLD_WIDTH = WIDTH / GRID_SIZE;
 	static int WORLD_HEIGHT = HEIGHT / GRID_SIZE;
@@ -35,13 +37,13 @@ public class MainGame extends ApplicationAdapter {
 	public void create () {
 		batch = new SpriteBatch();
 		debugRenderer = new ShapeRenderer();
-		camera = new OrthographicCamera();
-		camera.setToOrtho(false);
-		fitViewport = new FitViewport(camera.viewportWidth, camera.viewportHeight, camera);
+		camera = new OrthographicCamera(WIDTH,HEIGHT);
+		camera.setToOrtho(false, WIDTH, HEIGHT);
+		fitViewport = new FitViewport(WIDTH,HEIGHT, camera);
 
 		textures = new TextureLoader();
 
-		player = new Player(150,150, GRID_SIZE, 32);
+		player = new Player(100,100, GRID_SIZE, 32);
 		for (int col = 0; col < WORLD_HEIGHT; col++) {
 			for (int row = 0; row < WORLD_WIDTH; row++) {
 				if(row == 0 || row == WORLD_WIDTH-1 || col == 0 || col == WORLD_HEIGHT-1)
@@ -57,6 +59,12 @@ public class MainGame extends ApplicationAdapter {
 		world[3][11] = 1;
 		world[3][12] = 1;
 		world[4][13] = 1;
+
+		world[7][3] = 1;
+		world[7][4] = 1;
+		world[7][5] = 1;
+		world[6][6] = 1;
+		world[6][7] = 1;
 	}
 
 	@Override
@@ -66,12 +74,11 @@ public class MainGame extends ApplicationAdapter {
 
 	@Override
 	public void render () {
+		fitViewport.apply();
 		ScreenUtils.clear(Color.SKY);
-		camera.update();
 		handleInput();
 
 		player.update(world);
-//		camera.position.x = player.hitbox.x;
 
 		drawBatch();
 
@@ -82,7 +89,7 @@ public class MainGame extends ApplicationAdapter {
 	}
 
 	public void drawBatch() {
-		batch.setProjectionMatrix(camera.combined);
+		batch.setProjectionMatrix(fitViewport.getCamera().combined);
 		batch.begin();
 
 		for (int col = 0; col < WORLD_HEIGHT; col++) {
@@ -100,7 +107,6 @@ public class MainGame extends ApplicationAdapter {
 	}
 
 	public void renderDebug() {
-		debugRenderer.setProjectionMatrix(camera.combined);
 		debugRenderer.begin(ShapeRenderer.ShapeType.Line);
 
 		debugRenderer.setColor(Color.BLACK);
@@ -124,6 +130,8 @@ public class MainGame extends ApplicationAdapter {
 
 	@Override
 	public void dispose () {
+		batch.dispose();
+		debugRenderer.dispose();
 		textures.dispose();
 	}
 
